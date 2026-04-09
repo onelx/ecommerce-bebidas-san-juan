@@ -1,10 +1,12 @@
+'use client';
+
 import { OrderStatus } from '@/types';
 import {
   Clock,
   CheckCircle,
   ChefHat,
   Truck,
-  Package,
+  PackageCheck,
   XCircle,
 } from 'lucide-react';
 
@@ -18,68 +20,77 @@ const statusConfig: Record<
   OrderStatus,
   {
     label: string;
-    icon: React.ElementType;
+    color: string;
     bgColor: string;
-    textColor: string;
     borderColor: string;
+    Icon: React.ComponentType<{ className?: string }>;
   }
 > = {
   pending: {
     label: 'Pendiente',
-    icon: Clock,
+    color: 'text-yellow-700',
     bgColor: 'bg-yellow-100',
-    textColor: 'text-yellow-800',
     borderColor: 'border-yellow-300',
+    Icon: Clock,
   },
   confirmed: {
     label: 'Confirmado',
-    icon: CheckCircle,
+    color: 'text-blue-700',
     bgColor: 'bg-blue-100',
-    textColor: 'text-blue-800',
     borderColor: 'border-blue-300',
+    Icon: CheckCircle,
   },
   preparing: {
     label: 'Preparando',
-    icon: ChefHat,
+    color: 'text-purple-700',
     bgColor: 'bg-purple-100',
-    textColor: 'text-purple-800',
     borderColor: 'border-purple-300',
+    Icon: ChefHat,
   },
   on_the_way: {
-    label: 'En Camino',
-    icon: Truck,
+    label: 'En camino',
+    color: 'text-indigo-700',
     bgColor: 'bg-indigo-100',
-    textColor: 'text-indigo-800',
     borderColor: 'border-indigo-300',
+    Icon: Truck,
   },
   delivered: {
     label: 'Entregado',
-    icon: Package,
+    color: 'text-green-700',
     bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
     borderColor: 'border-green-300',
+    Icon: PackageCheck,
   },
   cancelled: {
     label: 'Cancelado',
-    icon: XCircle,
+    color: 'text-red-700',
     bgColor: 'bg-red-100',
-    textColor: 'text-red-800',
     borderColor: 'border-red-300',
+    Icon: XCircle,
   },
 };
 
-export function OrderStatusBadge({
+export default function OrderStatusBadge({
   status,
   size = 'md',
   showIcon = true,
 }: OrderStatusBadgeProps) {
   const config = statusConfig[status];
-  const Icon = config.icon;
+
+  if (!config) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-300">
+        Desconocido
+      </span>
+    );
+  }
+
+  const { label, color, bgColor, borderColor, Icon } = config;
 
   const sizeClasses = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-1.5 text-sm',
-    lg: 'px-4 py-2 text-base',
+    sm: 'px-2 py-0.5 text-xs gap-1',
+    md: 'px-3 py-1 text-sm gap-1.5',
+    lg: 'px-4 py-2 text-base gap-2',
   };
 
   const iconSizes = {
@@ -90,90 +101,10 @@ export function OrderStatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-semibold rounded-full border ${config.bgColor} ${config.textColor} ${config.borderColor} ${sizeClasses[size]}`}
+      className={`inline-flex items-center rounded-full font-semibold border ${bgColor} ${color} ${borderColor} ${sizeClasses[size]}`}
     >
       {showIcon && <Icon className={iconSizes[size]} />}
-      {config.label}
+      {label}
     </span>
-  );
-}
-
-export function OrderStatusTimeline({ status }: { status: OrderStatus }) {
-  const steps: Array<{ status: OrderStatus; label: string }> = [
-    { status: 'pending', label: 'Pendiente' },
-    { status: 'confirmed', label: 'Confirmado' },
-    { status: 'preparing', label: 'Preparando' },
-    { status: 'on_the_way', label: 'En Camino' },
-    { status: 'delivered', label: 'Entregado' },
-  ];
-
-  const currentStepIndex = steps.findIndex((step) => step.status === status);
-  const isCancelled = status === 'cancelled';
-
-  if (isCancelled) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center gap-2 text-red-800">
-          <XCircle className="w-6 h-6" />
-          <div>
-            <p className="font-semibold">Pedido Cancelado</p>
-            <p className="text-sm text-red-600">
-              Este pedido ha sido cancelado
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full">
-      <div className="flex justify-between items-center relative">
-        {/* Línea de progreso */}
-        <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10">
-          <div
-            className="h-full bg-purple-600 transition-all duration-500"
-            style={{
-              width: `${(currentStepIndex / (steps.length - 1)) * 100}%`,
-            }}
-          />
-        </div>
-
-        {/* Steps */}
-        {steps.map((step, index) => {
-          const config = statusConfig[step.status];
-          const Icon = config.icon;
-          const isActive = index <= currentStepIndex;
-          const isCurrent = index === currentStepIndex;
-
-          return (
-            <div
-              key={step.status}
-              className="flex flex-col items-center flex-1 relative"
-            >
-              {/* Icono */}
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                  isActive
-                    ? 'bg-purple-600 border-purple-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-400'
-                } ${isCurrent ? 'ring-4 ring-purple-200 scale-110' : ''}`}
-              >
-                <Icon className="w-5 h-5" />
-              </div>
-
-              {/* Label */}
-              <span
-                className={`mt-2 text-xs font-medium text-center ${
-                  isActive ? 'text-gray-900' : 'text-gray-500'
-                }`}
-              >
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
   );
 }
