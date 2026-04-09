@@ -1,233 +1,165 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { MapPin, Loader2, AlertCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { MapPin, Loader2 } from 'lucide-react';
 
 interface AddressAutocompleteProps {
   value: string;
-  onChange: (address: string, lat?: number, lng?: number) => void;
-  error?: string;
+  onChange: (address: string) => void;
+  onPlaceSelected?: (place: google.maps.places.PlaceResult) => void;
   placeholder?: string;
-  required?: boolean;
+  className?: string;
+  error?: string;
 }
 
-export function AddressAutocomplete({
+export default function AddressAutocomplete({
   value,
   onChange,
-  error,
+  onPlaceSelected,
   placeholder = 'Ingresá tu dirección de entrega',
-  required = false,
+  className = '',
+  error,
 }: AddressAutocompleteProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesService = useRef<google.maps.places.PlacesService | null>(null);
-  const sessionToken = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [scriptError, setScriptError] = useState(false);
 
   useEffect(() => {
-    // Inicializar servicios de Google Maps
-    if (typeof window !== 'undefined' && window.google) {
-      autocompleteService.current = new google.maps.places.AutocompleteService();
-      
-      // Crear un div temporal para el PlacesService
-      const div = document.createElement('div');
-      placesService.current = new google.maps.places.PlacesService(div);
-      
-      sessionToken.current = new google.maps.places.AutocompleteSessionToken();
-    }
-  }, []);
+    const initAutocomplete = () => {
+      if (!window.google || !window.google.maps || !window.google.maps.places) {
+        setScriptError(true);
+        setIsLoading(false);
+        return;
+      }
 
-  const fetchSuggestions = async (input: string) => {
-    if (!input || input.length < 3 || !autocompleteService.current) {
-      setSuggestions([]);
-      return;
-    }
+      if (!inputRef.current) return;
 
-    setIsLoading(true);
-
-    try {
-      const request: google.maps.places.AutocompletionRequest = {
-        input,
-        sessionToken: sessionToken.current || undefined,
-        componentRestrictions: { country: 'ar' },
-        types: ['address'],
-        bounds: new google.maps.LatLngBounds(
-          new google.maps.LatLng(-31.6, -68.6),
-          new google.maps.LatLng(-31.5, -68.5)
-        ),
-      };
-
-      autocompleteService.current.getPlacePredictions(
-        request,
-        (predictions, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setSuggestions(predictions);
-          } else {
-            setSuggestions([]);
+      try {
+        const autocomplete = new window.google.maps.places.Autocomplete(
+          inputRef.current,
+          {
+            types: ['address'],
+            componentRestrictions: { country: 'ar' },
+            fields: ['address_components', 'geometry', 'formatted_address', 'name'],
           }
-          setIsLoading(false);
-        }
-      );
-    } catch (err) {
-      console.error('Error fetching suggestions:', err);
-      setSuggestions([]);
-      setIsLoading(false);
-    }
-  };
+        );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue);
-    setShowSuggestions(true);
-    setSelectedIndex(-1);
-    fetchSuggestions(newValue);
-  };
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
 
-  const selectSuggestion = (prediction: google.maps.places.AutocompletePrediction) => {
-    if (!placesService.current) return;
+          if (!place.geometry || !place.geometry.location) {
+            console.warn('No se pudo obtener la ubicación del lugar');
+            return;
+          }
 
-    setIsLoading(true);
+          const addressComponents = place.address_components || [];
+          const city = addressComponents.find((comp) =>
+            comp.types.includes('locality')
+          )?.long_name;
 
-    placesService.current.getDetails(
-      {
-        placeId: prediction.place_id,
-        fields: ['geometry', 'formatted_address'],
-        sessionToken: sessionToken.current || undefined,
-      },
-      (place, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-          const lat = place.geometry?.location?.lat();
-          const lng = place.geometry?.location?.lng();
-          
-          onChange(
-            place.formatted_address || prediction.description,
-            lat,
-            lng
-          );
-          
-          // Renovar session token después de seleccionar
-          sessionToken.current = new google.maps.places.AutocompleteSessionToken();
-        }
-        
-        setSuggestions([]);
-        setShowSuggestions(false);
+          if (city && city.toLowerCase().includes('san juan')) {
+            const formattedAddress = place.formatted_address || place.name || '';
+            onChange(formattedAddress);
+
+            if (onPlaceSelected) {
+              onPlaceSelected(place);
+            }
+          } else {
+            alert('Por favor, seleccioná una dirección dentro de San Juan Capital');
+            onChange('');
+          }
+        });
+
+        autocompleteRef.current = autocomplete;
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error al inicializar Google Places:', err);
+        setScriptError(true);
         setIsLoading(false);
       }
-    );
-  };
+    };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showSuggestions || suggestions.length === 0) return;
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          selectSuggestion(suggestions[selectedIndex]);
+    if (window.google && window.google.maps && window.google.maps.places) {
+      initAutocomplete();
+    } else {
+      const checkGoogleMaps = setInterval(() => {
+        if (window.google && window.google.maps && window.google.maps.places) {
+          clearInterval(checkGoogleMaps);
+          initAutocomplete();
         }
-        break;
-      case 'Escape':
-        setShowSuggestions(false);
-        setSelectedIndex(-1);
-        break;
+      }, 100);
+
+      setTimeout(() => {
+        clearInterval(checkGoogleMaps);
+        if (!autocompleteRef.current) {
+          setScriptError(true);
+          setIsLoading(false);
+        }
+      }, 5000);
     }
+
+    return () => {
+      if (autocompleteRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current);
+      }
+    };
+  }, [onChange, onPlaceSelected]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
   };
 
-  const handleBlur = () => {
-    // Delay para permitir clicks en sugerencias
-    setTimeout(() => {
-      setShowSuggestions(false);
-      setSelectedIndex(-1);
-    }, 200);
-  };
-
-  return (
-    <div className="relative w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Dirección de entrega {required && <span className="text-red-500">*</span>}
-      </label>
-      
+  if (scriptError) {
+    return (
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <MapPin className="w-5 h-5" />
-          )}
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <MapPin className="h-5 w-5 text-gray-400" />
         </div>
-        
         <input
           ref={inputRef}
           type="text"
           value={value}
           onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => value.length >= 3 && setShowSuggestions(true)}
-          onBlur={handleBlur}
           placeholder={placeholder}
-          required={required}
-          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-            error
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300 focus:ring-purple-500'
-          }`}
-          autoComplete="off"
+          className={`block w-full pl-10 pr-3 py-3 border ${
+            error ? 'border-red-500' : 'border-gray-300'
+          } rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className}`}
         />
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        <p className="mt-1 text-xs text-orange-600">
+          Google Maps no está disponible. Ingresá tu dirección manualmente.
+        </p>
       </div>
+    );
+  }
 
-      {/* Sugerencias */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          {suggestions.map((suggestion, index) => (
-            <button
-              key={suggestion.place_id}
-              type="button"
-              onClick={() => selectSuggestion(suggestion)}
-              className={`w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                index === selectedIndex ? 'bg-purple-50' : ''
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-purple-600 mt-1 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {suggestion.structured_formatting.main_text}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {suggestion.structured_formatting.secondary_text}
-                  </p>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+  return (
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+        ) : (
+          <MapPin className="h-5 w-5 text-gray-400" />
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={handleInputChange}
+        placeholder={placeholder}
+        disabled={isLoading}
+        className={`block w-full pl-10 pr-3 py-3 border ${
+          error ? 'border-red-500' : 'border-gray-300'
+        } rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${className}`}
+      />
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {!error && (
+        <p className="mt-1 text-xs text-gray-500">
+          Comenzá a escribir tu dirección en San Juan Capital
+        </p>
       )}
-
-      {/* Error */}
-      {error && (
-        <div className="flex items-center gap-1 mt-1 text-red-600 text-sm">
-          <AlertCircle className="w-4 h-4" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Info */}
-      <p className="text-xs text-gray-500 mt-1">
-        Ingresá tu dirección completa en San Juan para verificar cobertura
-      </p>
     </div>
   );
 }
