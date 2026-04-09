@@ -1,47 +1,25 @@
 'use client';
 
-import { Fragment, useEffect } from 'react';
+import React, { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
-import { CartItem } from '@/types';
+import { useCart } from '@/hooks/useCart';
 import { formatPrice } from '@/lib/utils';
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  items: CartItem[];
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
 }
 
-export default function CartDrawer({
-  isOpen,
-  onClose,
-  items,
-  onUpdateQuantity,
-  onRemoveItem,
-}: CartDrawerProps) {
-  const subtotal = items.reduce((acc, item) => acc + item.subtotal, 0);
-  const itemCount = items.reduce((acc, item) => acc + item.quantity, 0);
+export function CartDrawer({ isOpen, onClose }: CartDrawerProps) {
+  const { items, removeItem, updateQuantity, getTotal, getItemCount } = useCart();
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
+  const handleQuantityChange = (productId: string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeItem(productId);
     } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  const handleUpdateQuantity = (productId: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      onRemoveItem(productId);
-    } else {
-      onUpdateQuantity(productId, newQuantity);
+      updateQuantity(productId, newQuantity);
     }
   };
 
@@ -57,7 +35,7 @@ export default function CartDrawer({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-hidden">
@@ -73,156 +51,188 @@ export default function CartDrawer({
                 leaveTo="translate-x-full"
               >
                 <Dialog.Panel className="pointer-events-auto w-screen max-w-md">
-                  <div className="flex h-full flex-col bg-white shadow-xl">
-                    <div className="flex items-center justify-between px-4 py-6 bg-gradient-to-r from-purple-600 to-pink-600">
-                      <Dialog.Title className="text-xl font-bold text-white flex items-center gap-2">
-                        <ShoppingCart className="w-6 h-6" />
-                        Mi Carrito
-                        {itemCount > 0 && (
-                          <span className="bg-white text-purple-600 text-sm font-bold px-2 py-1 rounded-full">
-                            {itemCount}
-                          </span>
-                        )}
-                      </Dialog.Title>
-                      <button
-                        type="button"
-                        className="text-white hover:text-gray-200 transition-colors"
-                        onClick={onClose}
-                      >
-                        <X className="h-6 w-6" />
-                      </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto px-4 py-6">
-                      {items.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                          <ShoppingCart className="w-24 h-24 text-gray-300 mb-4" />
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                            Tu carrito está vacío
-                          </h3>
-                          <p className="text-gray-500 mb-6">
-                            Agregá productos para comenzar tu pedido
-                          </p>
+                  <div className="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                    {/* Header */}
+                    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+                      <div className="flex items-start justify-between">
+                        <Dialog.Title className="text-lg font-medium text-gray-900">
+                          Carrito de compras
+                          {getItemCount() > 0 && (
+                            <span className="ml-2 text-sm text-gray-500">
+                              ({getItemCount()} {getItemCount() === 1 ? 'producto' : 'productos'})
+                            </span>
+                          )}
+                        </Dialog.Title>
+                        <div className="ml-3 flex h-7 items-center">
                           <button
+                            type="button"
+                            className="-m-2 p-2 text-gray-400 hover:text-gray-500"
                             onClick={onClose}
-                            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
                           >
-                            Ver Productos
+                            <span className="sr-only">Cerrar carrito</span>
+                            <svg
+                              className="h-6 w-6"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth="1.5"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
                           </button>
                         </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {items.map((item) => (
-                            <div
-                              key={item.product_id}
-                              className="flex gap-4 bg-gray-50 rounded-lg p-3 border border-gray-200"
+                      </div>
+
+                      {/* Cart Items */}
+                      <div className="mt-8">
+                        {items.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12">
+                            <svg
+                              className="w-24 h-24 text-gray-300 mb-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <div className="relative w-20 h-20 flex-shrink-0 bg-white rounded-md overflow-hidden">
-                                <Image
-                                  src={item.product.image_url || '/placeholder-product.png'}
-                                  alt={item.product.name}
-                                  fill
-                                  className="object-cover"
-                                  sizes="80px"
-                                />
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 text-sm mb-1 line-clamp-2">
-                                  {item.product.name}
-                                </h4>
-                                <p className="text-sm font-medium text-purple-600 mb-2">
-                                  {formatPrice(item.unit_price)}
-                                </p>
-
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center border border-gray-300 rounded-md overflow-hidden bg-white">
-                                    <button
-                                      onClick={() =>
-                                        handleUpdateQuantity(
-                                          item.product_id,
-                                          item.quantity - 1
-                                        )
-                                      }
-                                      className="p-1 hover:bg-gray-100 transition-colors"
-                                      aria-label="Disminuir cantidad"
-                                    >
-                                      <Minus className="w-3 h-3 text-gray-600" />
-                                    </button>
-                                    <span className="px-3 py-1 text-sm font-medium text-gray-900 min-w-[2rem] text-center border-x border-gray-300">
-                                      {item.quantity}
-                                    </span>
-                                    <button
-                                      onClick={() =>
-                                        handleUpdateQuantity(
-                                          item.product_id,
-                                          item.quantity + 1
-                                        )
-                                      }
-                                      disabled={item.quantity >= item.product.stock}
-                                      className="p-1 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                                      aria-label="Aumentar cantidad"
-                                    >
-                                      <Plus className="w-3 h-3 text-gray-600" />
-                                    </button>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                              />
+                            </svg>
+                            <p className="text-gray-500 text-center">
+                              Tu carrito está vacío
+                            </p>
+                            <button
+                              onClick={onClose}
+                              className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              Continuar comprando
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flow-root">
+                            <ul role="list" className="-my-6 divide-y divide-gray-200">
+                              {items.map((item) => (
+                                <li key={item.product.id} className="flex py-6">
+                                  <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
+                                    {item.product.image_url ? (
+                                      <Image
+                                        src={item.product.image_url}
+                                        alt={item.product.name}
+                                        width={96}
+                                        height={96}
+                                        className="h-full w-full object-cover object-center"
+                                      />
+                                    ) : (
+                                      <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                                        <svg
+                                          className="w-8 h-8 text-gray-300"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                          />
+                                        </svg>
+                                      </div>
+                                    )}
                                   </div>
 
-                                  <button
-                                    onClick={() => onRemoveItem(item.product_id)}
-                                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                    aria-label="Eliminar del carrito"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
+                                  <div className="ml-4 flex flex-1 flex-col">
+                                    <div>
+                                      <div className="flex justify-between text-base font-medium text-gray-900">
+                                        <h3>
+                                          <Link href={`/productos/${item.product.id}`} onClick={onClose}>
+                                            {item.product.name}
+                                          </Link>
+                                        </h3>
+                                        <p className="ml-4">
+                                          {formatPrice(item.product.price * item.quantity)}
+                                        </p>
+                                      </div>
+                                      <p className="mt-1 text-sm text-gray-500">
+                                        {formatPrice(item.product.price)} c/u
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-1 items-end justify-between text-sm">
+                                      <div className="flex items-center space-x-2">
+                                        <button
+                                          onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                                          className="text-gray-500 hover:text-gray-700 w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                                        >
+                                          -
+                                        </button>
+                                        <span className="text-gray-900 font-medium w-8 text-center">
+                                          {item.quantity}
+                                        </span>
+                                        <button
+                                          onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                                          className="text-gray-500 hover:text-gray-700 w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center"
+                                        >
+                                          +
+                                        </button>
+                                      </div>
 
-                              <div className="text-right">
-                                <p className="font-bold text-gray-900">
-                                  {formatPrice(item.subtotal)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                                      <div className="flex">
+                                        <button
+                                          type="button"
+                                          onClick={() => removeItem(item.product.id)}
+                                          className="font-medium text-red-600 hover:text-red-500"
+                                        >
+                                          Eliminar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Footer */}
                     {items.length > 0 && (
-                      <div className="border-t border-gray-200 px-4 py-6 bg-gray-50">
-                        <div className="space-y-3 mb-4">
-                          <div className="flex justify-between text-base">
-                            <span className="text-gray-600">Subtotal</span>
-                            <span className="font-medium text-gray-900">
-                              {formatPrice(subtotal)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm text-gray-500">
-                            <span>Envío</span>
-                            <span>Se calcula en el checkout</span>
-                          </div>
-                          <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-3">
-                            <span>Total</span>
-                            <span className="text-purple-600">
-                              {formatPrice(subtotal)}
-                            </span>
-                          </div>
+                      <div className="border-t border-gray-200 px-4 py-6 sm:px-6">
+                        <div className="flex justify-between text-base font-medium text-gray-900">
+                          <p>Subtotal</p>
+                          <p>{formatPrice(getTotal())}</p>
                         </div>
-
-                        <Link
-                          href="/carrito"
-                          onClick={onClose}
-                          className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white text-center py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-md hover:shadow-lg"
-                        >
-                          Ir al Carrito
-                        </Link>
-
-                        <button
-                          onClick={onClose}
-                          className="block w-full mt-3 bg-white text-purple-600 text-center py-3 px-6 rounded-lg font-semibold border-2 border-purple-600 hover:bg-purple-50 transition-colors"
-                        >
-                          Seguir Comprando
-                        </button>
+                        <p className="mt-0.5 text-sm text-gray-500">
+                          El costo de envío se calculará en el checkout.
+                        </p>
+                        <div className="mt-6">
+                          <Link
+                            href="/checkout"
+                            onClick={onClose}
+                            className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
+                          >
+                            Finalizar compra
+                          </Link>
+                        </div>
+                        <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
+                          <p>
+                            o{' '}
+                            <button
+                              type="button"
+                              className="font-medium text-blue-600 hover:text-blue-500"
+                              onClick={onClose}
+                            >
+                              Continuar comprando
+                              <span aria-hidden="true"> &rarr;</span>
+                            </button>
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
