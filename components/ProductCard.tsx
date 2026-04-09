@@ -1,174 +1,115 @@
-'use client';
-
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
 import { Product } from '@/types';
 import { formatPrice } from '@/lib/utils';
-import { ShoppingCart, Plus, Minus } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart?: (product: Product, quantity: number) => void;
+  onQuickAdd?: (product: Product) => void;
 }
 
-export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
-  const [quantity, setQuantity] = useState(1);
-  const [isAdding, setIsAdding] = useState(false);
-
-  const handleAddToCart = async (e: React.MouseEvent) => {
+export function ProductCard({ product, onQuickAdd }: ProductCardProps) {
+  const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!product.is_available || product.stock < 1) return;
-    
-    setIsAdding(true);
-    
-    if (onAddToCart) {
-      await onAddToCart(product, quantity);
-    }
-    
-    setTimeout(() => {
-      setIsAdding(false);
-      setQuantity(1);
-    }, 500);
-  };
-
-  const incrementQuantity = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (quantity < product.stock) {
-      setQuantity(prev => prev + 1);
+    if (onQuickAdd) {
+      onQuickAdd(product);
     }
   };
-
-  const decrementQuantity = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (quantity > 1) {
-      setQuantity(prev => prev - 1);
-    }
-  };
-
-  const isOutOfStock = !product.is_available || product.stock < 1;
 
   return (
     <Link href={`/productos/${product.id}`}>
-      <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100">
+      <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden border border-gray-200">
+        {/* Badge de disponibilidad */}
+        {!product.is_available && (
+          <div className="absolute top-2 right-2 z-10 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
+            Agotado
+          </div>
+        )}
+
         {product.is_pack && (
-          <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-            PACK
+          <div className="absolute top-2 left-2 z-10 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">
+            Pack
           </div>
         )}
 
-        {isOutOfStock && (
-          <div className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-            AGOTADO
-          </div>
-        )}
-
-        {!isOutOfStock && product.stock <= 5 && (
-          <div className="absolute top-2 right-2 z-10 bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-            ¡ÚLTIMAS {product.stock}!
-          </div>
-        )}
-
-        <div className="relative aspect-square overflow-hidden bg-gray-50">
-          <Image
-            src={product.image_url || '/placeholder-product.png'}
-            alt={product.name}
-            fill
-            className={`object-cover transition-transform duration-300 group-hover:scale-110 ${
-              isOutOfStock ? 'opacity-50 grayscale' : ''
-            }`}
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          />
+        {/* Imagen del producto */}
+        <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
+          {product.image_url ? (
+            <Image
+              src={product.image_url}
+              alt={product.name}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <svg
+                className="w-16 h-16 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+          )}
         </div>
 
+        {/* Información del producto */}
         <div className="p-4">
-          <h3 className="font-semibold text-lg text-gray-900 mb-1 line-clamp-2 group-hover:text-purple-600 transition-colors">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
             {product.name}
           </h3>
-          
+
           {product.description && (
-            <p className="text-sm text-gray-500 mb-3 line-clamp-2">
+            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
               {product.description}
             </p>
           )}
 
-          <div className="flex items-center justify-between mb-3">
-            <div>
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex flex-col">
               <span className="text-2xl font-bold text-gray-900">
                 {formatPrice(product.price)}
               </span>
+              {product.stock !== null && product.stock > 0 && product.stock < 10 && (
+                <span className="text-xs text-orange-600 mt-1">
+                  Solo {product.stock} disponibles
+                </span>
+              )}
             </div>
-            {!isOutOfStock && product.stock <= 10 && product.stock > 5 && (
-              <span className="text-xs text-orange-600 font-medium">
-                Stock: {product.stock}
-              </span>
+
+            {/* Botón de agregar rápido */}
+            {product.is_available && onQuickAdd && (
+              <button
+                onClick={handleQuickAdd}
+                className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full transition-colors duration-200 shadow-sm hover:shadow-md"
+                aria-label={`Agregar ${product.name} al carrito`}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+              </button>
             )}
           </div>
-
-          {!isOutOfStock && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
-                <button
-                  onClick={decrementQuantity}
-                  className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                  disabled={quantity <= 1}
-                  aria-label="Disminuir cantidad"
-                >
-                  <Minus className="w-4 h-4 text-gray-600" />
-                </button>
-                <span className="px-4 py-2 min-w-[3rem] text-center font-medium text-gray-900 border-x border-gray-300">
-                  {quantity}
-                </span>
-                <button
-                  onClick={incrementQuantity}
-                  className="p-2 hover:bg-gray-100 transition-colors disabled:opacity-50"
-                  disabled={quantity >= product.stock}
-                  aria-label="Aumentar cantidad"
-                >
-                  <Plus className="w-4 h-4 text-gray-600" />
-                </button>
-              </div>
-
-              <button
-                onClick={handleAddToCart}
-                disabled={isAdding}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all ${
-                  isAdding
-                    ? 'bg-green-500 text-white'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white shadow-sm hover:shadow-md'
-                }`}
-                aria-label="Agregar al carrito"
-              >
-                {isAdding ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    ¡Agregado!
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-5 h-5" />
-                    Agregar
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {isOutOfStock && (
-            <button
-              disabled
-              className="w-full px-4 py-2 rounded-md font-medium bg-gray-300 text-gray-500 cursor-not-allowed"
-            >
-              No disponible
-            </button>
-          )}
         </div>
       </div>
     </Link>
