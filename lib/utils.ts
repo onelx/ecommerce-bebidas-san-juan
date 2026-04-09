@@ -1,8 +1,8 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 export function formatPrice(price: number): string {
@@ -11,141 +11,74 @@ export function formatPrice(price: number): string {
     currency: 'ARS',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(price);
-}
-
-export function calculateDeliveryFee(
-  distance: number,
-  subtotal: number,
-  isNightTime: boolean = false
-): number {
-  const baseDeliveryFee =
-    Number(process.env.NEXT_PUBLIC_DEFAULT_DELIVERY_FEE) || 500;
-  const freeDeliveryMinimum =
-    Number(process.env.NEXT_PUBLIC_FREE_DELIVERY_MINIMUM) || 5000;
-
-  if (subtotal >= freeDeliveryMinimum) {
-    return 0;
-  }
-
-  let fee = baseDeliveryFee;
-
-  if (distance > 5) {
-    fee += (distance - 5) * 100;
-  }
-
-  if (isNightTime) {
-    fee *= 1.3;
-  }
-
-  return Math.round(fee);
+  }).format(price)
 }
 
 export function formatDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('es-AR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(d);
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(date))
 }
 
-export function formatShortDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+export function formatDateTime(date: string | Date): string {
   return new Intl.DateTimeFormat('es-AR', {
-    dateStyle: 'short',
-  }).format(d);
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date))
 }
 
 export function formatTime(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('es-AR', {
-    timeStyle: 'short',
-  }).format(d);
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date))
 }
 
 export function formatPhoneNumber(phone: string): string {
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 10) {
-    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  const cleaned = phone.replace(/\D/g, '')
+  
+  if (cleaned.startsWith('549')) {
+    const areaCode = cleaned.slice(3, 6)
+    const number = cleaned.slice(6)
+    return `+54 9 ${areaCode} ${number}`
   }
-  return phone;
+  
+  if (cleaned.startsWith('54')) {
+    const areaCode = cleaned.slice(2, 5)
+    const number = cleaned.slice(5)
+    return `+54 ${areaCode} ${number}`
+  }
+  
+  return phone
 }
 
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-export function validatePhone(phone: string): boolean {
-  const cleaned = phone.replace(/\D/g, '');
-  return cleaned.length >= 10 && cleaned.length <= 15;
-}
-
-export function slugify(text: string): string {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-}
-
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
-}
-
-export function getOrderStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    preparing: 'bg-purple-100 text-purple-800',
-    on_the_way: 'bg-indigo-100 text-indigo-800',
-    delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-800';
-}
-
-export function getOrderStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    pending: 'Pendiente',
-    confirmed: 'Confirmado',
-    preparing: 'Preparando',
-    on_the_way: 'En camino',
-    delivered: 'Entregado',
-    cancelled: 'Cancelado',
-  };
-  return labels[status] || status;
-}
-
-export function getPaymentStatusColor(status: string): string {
-  const colors: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    paid: 'bg-green-100 text-green-800',
-    failed: 'bg-red-100 text-red-800',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-800';
-}
-
-export function getPaymentStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    pending: 'Pendiente',
-    paid: 'Pagado',
-    failed: 'Fallido',
-  };
-  return labels[status] || status;
-}
-
-export function getPaymentMethodLabel(method: string): string {
-  const labels: Record<string, string> = {
-    mercadopago: 'Mercado Pago',
-    cash: 'Efectivo',
-  };
-  return labels[method] || method;
+export function calculateDeliveryFee(
+  distanceKm: number,
+  isNightTime: boolean = false
+): number {
+  const baseDeliveryFee = parseFloat(process.env.BASE_DELIVERY_FEE || '500')
+  const deliveryRadius = parseFloat(process.env.DELIVERY_RADIUS_KM || '15')
+  
+  if (distanceKm > deliveryRadius) {
+    return 0
+  }
+  
+  let fee = baseDeliveryFee
+  
+  if (distanceKm > 5) {
+    fee += (distanceKm - 5) * 50
+  }
+  
+  if (isNightTime) {
+    fee += 200
+  }
+  
+  return Math.round(fee)
 }
 
 export function calculateDistance(
@@ -154,55 +87,167 @@ export function calculateDistance(
   lat2: number,
   lon2: number
 ): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const R = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
       Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+      Math.sin(dLon / 2)
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
 }
 
-export function isNightTime(): boolean {
-  const hour = new Date().getHours();
-  return hour >= 22 || hour < 6;
+function toRad(degrees: number): number {
+  return degrees * (Math.PI / 180)
+}
+
+export function isNightTime(date: Date = new Date()): boolean {
+  const hour = date.getHours()
+  return hour >= 22 || hour < 6
+}
+
+export function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function validatePhone(phone: string): boolean {
+  const cleaned = phone.replace(/\D/g, '')
+  return cleaned.length >= 10 && cleaned.length <= 15
+}
+
+export function generateOrderNumber(): number {
+  return Math.floor(10000 + Math.random() * 90000)
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+}
+
+export function truncate(text: string, length: number): string {
+  if (text.length <= length) return text
+  return text.slice(0, length) + '...'
+}
+
+export function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
 }
 
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: NodeJS.Timeout | null = null
+
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
-      timeout = null;
-      func(...args);
-    };
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
+      timeout = null
+      func(...args)
+    }
+
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+    timeout = setTimeout(later, wait)
+  }
 }
 
-export function generateOrderNumber(): number {
-  return Math.floor(100000 + Math.random() * 900000);
-}
+export function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  limit: number
+): (...args: Parameters<T>) => void {
+  let inThrottle: boolean = false
 
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return function executedFunction(...args: Parameters<T>) {
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      setTimeout(() => {
+        inThrottle = false
+      }, limit)
+    }
+  }
 }
 
 export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  return 'Ha ocurrido un error inesperado';
+  if (error instanceof Error) {
+    return error.message
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  return 'Ha ocurrido un error inesperado'
 }
 
-export function sanitizeHtml(html: string): string {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
+  return array.reduce((result, item) => {
+    const group = String(item[key])
+    if (!result[group]) {
+      result[group] = []
+    }
+    result[group].push(item)
+    return result
+  }, {} as Record<string, T[]>)
+}
+
+export function unique<T>(array: T[]): T[] {
+  return Array.from(new Set(array))
+}
+
+export function sum(array: number[]): number {
+  return array.reduce((acc, val) => acc + val, 0)
+}
+
+export function average(array: number[]): number {
+  if (array.length === 0) return 0
+  return sum(array) / array.length
+}
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+export function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+export function isServer(): boolean {
+  return typeof window === 'undefined'
+}
+
+export function isBrowser(): boolean {
+  return !isServer()
+}
+
+export function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  
+  return 'http://localhost:3000'
 }
