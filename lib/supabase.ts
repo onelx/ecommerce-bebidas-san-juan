@@ -1,67 +1,104 @@
-import { createClient } from '@supabase/supabase-js';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
-export const supabaseAdmin = supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    })
-  : null;
+export const supabaseAdmin = createClient(
+  supabaseUrl,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+)
 
-export function createBrowserClient() {
-  return createClientComponentClient();
-}
+export type SupabaseClient = typeof supabase
 
 export async function getSession() {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session;
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) {
+    console.error('Error getting session:', error)
+    return null
+  }
+  return session
 }
 
-export async function getCurrentUser() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
-}
-
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  return { data, error };
-}
-
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-  return { data, error };
+export async function getUser() {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error) {
+    console.error('Error getting user:', error)
+    return null
+  }
+  return user
 }
 
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    console.error('Error signing out:', error)
+    throw error
+  }
+}
+
+export async function signInWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+  if (error) {
+    console.error('Error signing in:', error)
+    throw error
+  }
+  return data
+}
+
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  fullName: string,
+  phone: string
+) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+        phone,
+      },
+    },
+  })
+  
+  if (error) {
+    console.error('Error signing up:', error)
+    throw error
+  }
+
+  if (data.user) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: data.user.id,
+        full_name: fullName,
+        phone,
+        role: 'customer',
+      })
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError)
+    }
+  }
+
+  return data
 }
 
 export async function getUserProfile(userId: string) {
@@ -69,29 +106,76 @@ export async function getUserProfile(userId: string) {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
-  return { data, error };
+    .single()
+
+  if (error) {
+    console.error('Error getting profile:', error)
+    return null
+  }
+
+  return data
 }
 
 export async function updateUserProfile(
   userId: string,
-  updates: { full_name?: string; phone?: string }
+  updates: {
+    full_name?: string
+    phone?: string
+  }
 ) {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
     .eq('id', userId)
     .select()
-    .single();
-  return { data, error };
+    .single()
+
+  if (error) {
+    console.error('Error updating profile:', error)
+    throw error
+  }
+
+  return data
 }
 
-export async function isAdmin(userId: string): Promise<boolean> {
-  const { data } = await getUserProfile(userId);
-  return data?.role === 'admin';
+export function subscribeToOrderUpdates(
+  orderId: string,
+  callback: (payload: any) => void
+) {
+  const channel = supabase
+    .channel(`order-${orderId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${orderId}`,
+      },
+      callback
+    )
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
 }
 
-export async function isDeliveryPerson(userId: string): Promise<boolean> {
-  const { data } = await getUserProfile(userId);
-  return data?.role === 'delivery';
+export function subscribeToAllOrders(callback: (payload: any) => void) {
+  const channel = supabase
+    .channel('all-orders')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'orders',
+      },
+      callback
+    )
+    .subscribe()
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
 }
