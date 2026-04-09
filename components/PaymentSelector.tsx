@@ -1,144 +1,176 @@
 'use client';
 
 import { useState } from 'react';
+import { PaymentMethod } from '@/types';
 import { CreditCard, Banknote, Check } from 'lucide-react';
 import Image from 'next/image';
 
-export type PaymentMethod = 'mercadopago' | 'cash';
-
 interface PaymentSelectorProps {
-  value: PaymentMethod;
-  onChange: (method: PaymentMethod) => void;
+  selectedMethod: PaymentMethod | null;
+  onSelectMethod: (method: PaymentMethod) => void;
   disabled?: boolean;
 }
 
-export function PaymentSelector({
-  value,
-  onChange,
+export default function PaymentSelector({
+  selectedMethod,
+  onSelectMethod,
   disabled = false,
 }: PaymentSelectorProps) {
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(value);
-
-  const handleSelect = (method: PaymentMethod) => {
-    if (disabled) return;
-    setSelectedMethod(method);
-    onChange(method);
-  };
+  const paymentMethods = [
+    {
+      id: 'mercadopago' as PaymentMethod,
+      name: 'Mercado Pago',
+      description: 'Pagá con tarjeta de crédito/débito',
+      icon: CreditCard,
+      features: ['Pago seguro', 'Confirmación inmediata', 'Todas las tarjetas'],
+      recommended: true,
+    },
+    {
+      id: 'cash' as PaymentMethod,
+      name: 'Efectivo',
+      description: 'Pagá cuando recibís tu pedido',
+      icon: Banknote,
+      features: ['Pago al recibir', 'Sin recargos', 'Llevá cambio'],
+      recommended: false,
+    },
+  ];
 
   return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700 mb-3">
-        Método de pago <span className="text-red-500">*</span>
-      </label>
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-gray-900">
+        Método de pago
+      </h3>
 
-      {/* Mercado Pago */}
-      <button
-        type="button"
-        onClick={() => handleSelect('mercadopago')}
-        disabled={disabled}
-        className={`w-full p-4 border-2 rounded-lg transition-all duration-200 ${
-          selectedMethod === 'mercadopago'
-            ? 'border-purple-600 bg-purple-50'
-            : 'border-gray-300 hover:border-purple-400 bg-white'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Logo de Mercado Pago */}
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-blue-600" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {paymentMethods.map((method) => {
+          const Icon = method.icon;
+          const isSelected = selectedMethod === method.id;
+
+          return (
+            <button
+              key={method.id}
+              onClick={() => onSelectMethod(method.id)}
+              disabled={disabled}
+              className={`relative flex flex-col p-4 rounded-lg border-2 transition-all text-left ${
+                isSelected
+                  ? 'border-purple-600 bg-purple-50 shadow-md'
+                  : 'border-gray-200 bg-white hover:border-purple-300'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              {method.recommended && (
+                <span className="absolute -top-2 right-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  Recomendado
+                </span>
+              )}
+
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2 rounded-lg ${
+                      isSelected ? 'bg-purple-600' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Icon
+                      className={`w-6 h-6 ${
+                        isSelected ? 'text-white' : 'text-gray-600'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <h4
+                      className={`font-semibold ${
+                        isSelected ? 'text-purple-900' : 'text-gray-900'
+                      }`}
+                    >
+                      {method.name}
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {method.description}
+                    </p>
+                  </div>
+                </div>
+
+                {isSelected && (
+                  <div className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </div>
+
+              <ul className="space-y-1.5 ml-11">
+                {method.features.map((feature, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center gap-2 text-sm text-gray-600"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected ? 'bg-purple-600' : 'bg-gray-400'
+                      }`}
+                    />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              {method.id === 'mercadopago' && (
+                <div className="mt-3 pt-3 border-t border-gray-200 ml-11">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/mercadopago-logo.svg"
+                      alt="Mercado Pago"
+                      width={80}
+                      height={20}
+                      className="opacity-70"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <span className="text-xs text-gray-500">
+                      Pago 100% seguro
+                    </span>
+                  </div>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedMethod === 'cash' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex gap-3">
+            <Banknote className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-amber-900 mb-1">
+                Importante - Pago en Efectivo
+              </h4>
+              <ul className="text-sm text-amber-800 space-y-1">
+                <li>• Tené el monto exacto o cambio disponible</li>
+                <li>• El repartidor confirmará el pago al entregar</li>
+                <li>• Aceptamos billetes de hasta $10.000</li>
+              </ul>
             </div>
+          </div>
+        </div>
+      )}
 
-            <div className="text-left">
-              <h3 className="font-semibold text-gray-900">Mercado Pago</h3>
-              <p className="text-sm text-gray-600">
-                Tarjeta de crédito/débito
+      {selectedMethod === 'mercadopago' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex gap-3">
+            <CreditCard className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 mb-1">
+                Pago con Mercado Pago
+              </h4>
+              <p className="text-sm text-blue-800">
+                Serás redirigido a Mercado Pago para completar tu pago de forma
+                segura. Una vez confirmado, procesaremos tu pedido inmediatamente.
               </p>
             </div>
           </div>
-
-          {selectedMethod === 'mercadopago' && (
-            <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-              <Check className="w-4 h-4 text-white" />
-            </div>
-          )}
         </div>
-
-        {/* Detalles adicionales */}
-        {selectedMethod === 'mercadopago' && (
-          <div className="mt-3 pt-3 border-t border-purple-200">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="flex gap-1">
-                <div className="w-8 h-5 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
-                  V
-                </div>
-                <div className="w-8 h-5 bg-gradient-to-r from-red-600 to-orange-500 rounded flex items-center justify-center text-white text-xs font-bold">
-                  M
-                </div>
-                <div className="w-8 h-5 bg-gradient-to-r from-blue-800 to-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                  A
-                </div>
-              </div>
-              <span className="text-xs">y más métodos disponibles</span>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Pago seguro procesado por Mercado Pago
-            </p>
-          </div>
-        )}
-      </button>
-
-      {/* Efectivo */}
-      <button
-        type="button"
-        onClick={() => handleSelect('cash')}
-        disabled={disabled}
-        className={`w-full p-4 border-2 rounded-lg transition-all duration-200 ${
-          selectedMethod === 'cash'
-            ? 'border-green-600 bg-green-50'
-            : 'border-gray-300 hover:border-green-400 bg-white'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Icono de Efectivo */}
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Banknote className="w-6 h-6 text-green-600" />
-            </div>
-
-            <div className="text-left">
-              <h3 className="font-semibold text-gray-900">Efectivo</h3>
-              <p className="text-sm text-gray-600">Pagás al recibir</p>
-            </div>
-          </div>
-
-          {selectedMethod === 'cash' && (
-            <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-              <Check className="w-4 h-4 text-white" />
-            </div>
-          )}
-        </div>
-
-        {/* Detalles adicionales */}
-        {selectedMethod === 'cash' && (
-          <div className="mt-3 pt-3 border-t border-green-200">
-            <p className="text-sm text-gray-600">
-              💵 El repartidor llevará cambio
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Pagá en efectivo cuando recibas tu pedido
-            </p>
-          </div>
-        )}
-      </button>
-
-      {/* Info adicional */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <p className="text-xs text-blue-800">
-          <strong>🔒 Pago seguro:</strong> Todos los métodos de pago son 100%
-          seguros y verificados.
-        </p>
-      </div>
+      )}
     </div>
   );
 }
