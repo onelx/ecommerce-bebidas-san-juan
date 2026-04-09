@@ -1,147 +1,157 @@
-# Ecommerce Bebidas San Juan
+# 🍺 Ecommerce Bebidas San Juan
 
-Plataforma de venta online de bebidas premium con delivery 24hs en San Juan.
+Plataforma de venta online de bebidas premium con delivery 24hs en San Juan, Argentina.
 
 ## 🚀 Stack Tecnológico
 
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- **Frontend**: Next.js 14 (App Router) + React 18
+- **Styling**: Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Edge Functions + Realtime)
 - **Pagos**: Mercado Pago
 - **Mapas**: Google Maps API
 - **Hosting**: Vercel
 
-## 📋 Prerequisitos
+## 📋 Requisitos Previos
 
-- Node.js 18+ y npm/yarn
-- Cuenta de Supabase
-- Cuenta de Mercado Pago (credenciales de prueba o producción)
-- API Key de Google Maps
+- Node.js 18+ y npm
+- Cuenta en [Supabase](https://supabase.com)
+- Cuenta en [Mercado Pago Developers](https://www.mercadopago.com.ar/developers)
+- API Key de [Google Maps](https://console.cloud.google.com/)
 
-## 🛠️ Instalación
+## 🛠️ Instalación y Setup
 
-1. **Clonar el repositorio**
-
-```bash
-git clone <tu-repo>
-cd ecommerce-bebidas-sj
-```
-
-2. **Instalar dependencias**
+### 1. Clonar el repositorio
 
 ```bash
+git clone <repository-url>
+cd ecommerce-bebidas-sanjuan
 npm install
 ```
 
-3. **Configurar variables de entorno**
+### 2. Configurar Supabase
 
-Copiá `.env.example` a `.env.local` y completá todas las variables:
+1. Crea un nuevo proyecto en [Supabase](https://supabase.com/dashboard)
+2. Ve a `Settings > API` y copia:
+   - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
+   - anon/public key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - service_role key → `SUPABASE_SERVICE_ROLE_KEY`
 
-```bash
-cp .env.example .env.local
+### 3. Ejecutar migraciones de base de datos
+
+Ve a SQL Editor en Supabase y ejecuta el script de migración:
+
+```sql
+-- Ver archivo: supabase/migrations/001_initial_schema.sql
 ```
 
-4. **Configurar Supabase**
+### 4. Configurar variables de entorno
 
-- Creá un proyecto en [Supabase](https://app.supabase.com)
-- Ejecutá las migraciones SQL (ver carpeta `/supabase/migrations`)
-- Configurá las políticas RLS según documentación
+```bash
+cp .env.example .env
+```
 
-5. **Iniciar el servidor de desarrollo**
+Completa todas las variables en el archivo `.env` con tus credenciales reales.
+
+### 5. Configurar Mercado Pago
+
+1. Ve a [Mercado Pago Developers](https://www.mercadopago.com.ar/developers/panel)
+2. Crea una aplicación nueva
+3. Copia tus credenciales de TEST para desarrollo
+4. Configura la URL de webhooks: `https://tu-dominio.com/api/webhooks/mercadopago`
+
+### 6. Configurar Google Maps
+
+1. Ve a [Google Cloud Console](https://console.cloud.google.com/)
+2. Crea un proyecto y activa las APIs:
+   - Maps JavaScript API
+   - Places API
+   - Geocoding API
+3. Crea credenciales (API Key)
+4. Restringe la key a tu dominio en producción
+
+## 🏃 Ejecutar en desarrollo
 
 ```bash
 npm run dev
 ```
 
-Abrí [http://localhost:3000](http://localhost:3000) en tu navegador.
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-## 🗄️ Base de Datos
-
-### Migraciones
-
-Las migraciones SQL están en `/supabase/migrations/`. Ejecutalas en orden en tu proyecto de Supabase.
-
-### Esquema Principal
-
-- **profiles**: Usuarios y roles (customer, admin, delivery)
-- **categories**: Categorías de productos
-- **products**: Productos con stock y precios
-- **orders**: Pedidos con estados y tracking
-- **order_items**: Items de cada pedido
-- **delivery_zones**: Zonas de cobertura con polígonos geográficos
-
-## 🔐 Autenticación
-
-El sistema usa Supabase Auth con:
-- Email/Password para usuarios registrados
-- Modo invitado para compras sin registro
-- Roles: customer, admin, delivery
-
-## 💳 Integración Mercado Pago
-
-1. Configurá tus credenciales en `.env.local`
-2. El webhook debe apuntar a: `https://tu-dominio.com/api/webhooks/mercadopago`
-3. Configurá el webhook en tu panel de Mercado Pago
-
-## 🗺️ Google Maps
-
-Necesitás habilitar las siguientes APIs:
-- Maps JavaScript API
-- Geocoding API
-- Places API
-
-## 🚀 Deploy en Vercel
-
-1. **Conectá el repositorio**
+## 🏗️ Build para producción
 
 ```bash
-vercel
+npm run build
+npm start
 ```
 
-2. **Configurá variables de entorno**
+## 📦 Deploy en Vercel
 
-Agregá todas las variables de `.env.local` en Vercel Dashboard.
+1. Conecta tu repositorio en [Vercel](https://vercel.com)
+2. Configura las variables de entorno (todas las del `.env`)
+3. Deploy automático en cada push a `main`
 
-3. **Deploy**
+## 🗄️ Estructura del Proyecto
 
-```bash
-vercel --prod
 ```
+/app
+  /api              # API Routes (endpoints REST)
+  /admin            # Dashboard administrativo
+  /(shop)           # Rutas del ecommerce
+    /catalogo       # Catálogo de productos
+    /producto       # Detalle de producto
+    /carrito        # Carrito de compras
+    /checkout       # Proceso de pago
+    /tracking       # Seguimiento de pedido
+  /login            # Autenticación
+/components         # Componentes reutilizables
+/hooks              # Custom React Hooks
+/lib                # Utilidades y configuración
+/services           # Lógica de negocio
+/types              # Definiciones TypeScript
+/supabase           # Migraciones y funciones
+```
+
+## 🔑 Usuarios de prueba
+
+### Cliente
+- Email: cliente@test.com
+- Password: test123
+
+### Admin
+- Email: admin@bebidassanjuan.com
+- Password: (configurado en ADMIN_PASSWORD)
+
+## 🧪 Testing de Pagos (Mercado Pago)
+
+Usa estas tarjetas de prueba:
+
+- **Aprobado**: 5031 7557 3453 0604 | CVV: 123 | Exp: 11/25
+- **Rechazado**: 5031 4332 1540 6351 | CVV: 123 | Exp: 11/25
+
+Más info: [Tarjetas de prueba MP](https://www.mercadopago.com.ar/developers/es/docs/checkout-api/testing)
 
 ## 📱 Funcionalidades Principales
 
-### Para Clientes
-- Catálogo de productos con filtros
-- Carrito de compras persistente
-- Checkout con validación de zona
-- Pago online (Mercado Pago) o efectivo
-- Tracking en tiempo real del pedido
+- ✅ Catálogo de productos con filtros
+- ✅ Carrito de compras persistente
+- ✅ Checkout con validación de zona de entrega
+- ✅ Pago con Mercado Pago o efectivo
+- ✅ Tracking en tiempo real con Supabase Realtime
+- ✅ Panel admin para gestión de pedidos y productos
+- ✅ Notificaciones por WhatsApp (opcional)
+- ✅ Delivery 24hs en San Juan
 
-### Para Administradores
-- Dashboard con métricas del día
-- Gestión de productos (CRUD)
-- Gestión de pedidos
-- Asignación de repartidores
-- Notificaciones por WhatsApp
+## 🔐 Seguridad
 
-### Para Repartidores
-- Vista de pedidos asignados
-- Actualización de estados
-- Información de entrega
+- Row Level Security (RLS) habilitado en todas las tablas
+- Validación de zona de entrega server-side
+- Webhooks firmados de Mercado Pago
+- Service Role Key solo en server-side
 
-## 🔧 Scripts Disponibles
+## 📞 Soporte
 
-```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build de producción
-npm run start        # Servidor de producción
-npm run lint         # Linter
-npm run type-check   # Verificación de tipos
-```
+Para consultas: soporte@bebidassanjuan.com
 
 ## 📄 Licencia
 
-Propietario - Todos los derechos reservados
-
-## 🆘 Soporte
-
-Para problemas o consultas, contactá a: soporte@bebidasanjuan.com
+Proyecto privado - Todos los derechos reservados
