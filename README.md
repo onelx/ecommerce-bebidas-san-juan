@@ -1,13 +1,11 @@
 # Ecommerce Bebidas San Juan
 
-Plataforma de venta online de bebidas premium con delivery 24hs en San Juan. Sistema de pedidos en tiempo real con tracking de entregas.
+Plataforma de venta online de bebidas premium con delivery 24hs en San Juan.
 
 ## 🚀 Stack Tecnológico
 
-- **Frontend**: Next.js 14 (App Router) + React 18
-- **Styling**: Tailwind CSS + shadcn/ui components
+- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Edge Functions + Realtime)
-- **Autenticación**: Supabase Auth
 - **Pagos**: Mercado Pago
 - **Mapas**: Google Maps API
 - **Hosting**: Vercel
@@ -15,40 +13,40 @@ Plataforma de venta online de bebidas premium con delivery 24hs en San Juan. Sis
 ## 📋 Prerequisitos
 
 - Node.js 18+ y npm/yarn
-- Cuenta en Supabase (gratuita)
-- Cuenta en Mercado Pago (cuenta vendedor)
-- Google Maps API Key (opcional para autocompletado de direcciones)
+- Cuenta de Supabase
+- Cuenta de Mercado Pago (credenciales de prueba o producción)
+- API Key de Google Maps
 
-## 🛠️ Setup Local
+## 🛠️ Instalación
 
-### 1. Clonar el repositorio
+1. **Clonar el repositorio**
 
 ```bash
-git clone [tu-repo]
-cd ecommerce-bebidas-sanjuan
+git clone <tu-repo>
+cd ecommerce-bebidas-sj
 ```
 
-### 2. Instalar dependencias
+2. **Instalar dependencias**
 
 ```bash
 npm install
 ```
 
-### 3. Configurar Supabase
+3. **Configurar variables de entorno**
 
-1. Crear un proyecto en [Supabase](https://app.supabase.com)
-2. Ejecutar las migraciones SQL (ver sección Database Setup)
-3. Obtener las credenciales: Settings > API
-
-### 4. Configurar variables de entorno
+Copiá `.env.example` a `.env.local` y completá todas las variables:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Completar todas las variables en `.env.local` con tus credenciales.
+4. **Configurar Supabase**
 
-### 5. Iniciar servidor de desarrollo
+- Creá un proyecto en [Supabase](https://app.supabase.com)
+- Ejecutá las migraciones SQL (ver carpeta `/supabase/migrations`)
+- Configurá las políticas RLS según documentación
+
+5. **Iniciar el servidor de desarrollo**
 
 ```bash
 npm run dev
@@ -56,176 +54,94 @@ npm run dev
 
 Abrí [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-## 🗄️ Database Setup
+## 🗄️ Base de Datos
 
-Ejecutá este SQL en el SQL Editor de Supabase:
+### Migraciones
 
-```sql
--- Habilitar extensiones necesarias
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";
+Las migraciones SQL están en `/supabase/migrations/`. Ejecutalas en orden en tu proyecto de Supabase.
 
--- Enum types
-CREATE TYPE user_role AS ENUM ('customer', 'admin', 'delivery');
-CREATE TYPE payment_method AS ENUM ('mercadopago', 'cash');
-CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed');
-CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'preparing', 'on_the_way', 'delivered', 'cancelled');
+### Esquema Principal
 
--- Tabla de perfiles (extiende auth.users)
-CREATE TABLE profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name TEXT,
-  phone TEXT,
-  role user_role DEFAULT 'customer',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+- **profiles**: Usuarios y roles (customer, admin, delivery)
+- **categories**: Categorías de productos
+- **products**: Productos con stock y precios
+- **orders**: Pedidos con estados y tracking
+- **order_items**: Items de cada pedido
+- **delivery_zones**: Zonas de cobertura con polígonos geográficos
 
--- Tabla de categorías
-CREATE TABLE categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  image_url TEXT,
-  "order" INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+## 🔐 Autenticación
 
--- Tabla de productos
-CREATE TABLE products (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  description TEXT,
-  price DECIMAL(10,2) NOT NULL,
-  category_id UUID REFERENCES categories(id),
-  image_url TEXT,
-  stock INTEGER DEFAULT 0,
-  is_available BOOLEAN DEFAULT true,
-  is_pack BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+El sistema usa Supabase Auth con:
+- Email/Password para usuarios registrados
+- Modo invitado para compras sin registro
+- Roles: customer, admin, delivery
 
--- Tabla de zonas de delivery
-CREATE TABLE delivery_zones (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
-  polygon GEOGRAPHY(POLYGON, 4326),
-  delivery_fee DECIMAL(10,2) NOT NULL,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+## 💳 Integración Mercado Pago
 
--- Tabla de pedidos
-CREATE TABLE orders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_number SERIAL UNIQUE,
-  customer_name TEXT NOT NULL,
-  customer_email TEXT,
-  customer_phone TEXT NOT NULL,
-  delivery_address TEXT NOT NULL,
-  delivery_lat DECIMAL(10,8),
-  delivery_lng DECIMAL(11,8),
-  subtotal DECIMAL(10,2) NOT NULL,
-  delivery_fee DECIMAL(10,2) NOT NULL,
-  total DECIMAL(10,2) NOT NULL,
-  payment_method payment_method NOT NULL,
-  payment_status payment_status DEFAULT 'pending',
-  mp_preference_id TEXT,
-  mp_payment_id TEXT,
-  status order_status DEFAULT 'pending',
-  delivery_person_id UUID REFERENCES profiles(id),
-  notes TEXT,
-  include_ice BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  delivered_at TIMESTAMPTZ
-);
+1. Configurá tus credenciales en `.env.local`
+2. El webhook debe apuntar a: `https://tu-dominio.com/api/webhooks/mercadopago`
+3. Configurá el webhook en tu panel de Mercado Pago
 
--- Tabla de items de pedido
-CREATE TABLE order_items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id),
-  quantity INTEGER NOT NULL,
-  unit_price DECIMAL(10,2) NOT NULL,
-  subtotal DECIMAL(10,2) NOT NULL
-);
+## 🗺️ Google Maps
 
--- Índices para performance
-CREATE INDEX idx_products_category ON products(category_id);
-CREATE INDEX idx_products_available ON products(is_available);
-CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_orders_created ON orders(created_at DESC);
-CREATE INDEX idx_order_items_order ON order_items(order_id);
+Necesitás habilitar las siguientes APIs:
+- Maps JavaScript API
+- Geocoding API
+- Places API
 
--- RLS (Row Level Security) Policies
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+## 🚀 Deploy en Vercel
 
--- Políticas públicas de lectura
-CREATE POLICY "Categories públicas" ON categories FOR SELECT TO public USING (true);
-CREATE POLICY "Productos públicos" ON products FOR SELECT TO public USING (is_available = true);
+1. **Conectá el repositorio**
 
--- Políticas de orders (lectura por email o auth)
-CREATE POLICY "Ver propios pedidos" ON orders FOR SELECT TO public 
-  USING (customer_email = auth.jwt()->>'email' OR auth.uid() IN (
-    SELECT id FROM profiles WHERE role IN ('admin', 'delivery')
-  ));
-
--- Políticas admin
-CREATE POLICY "Admin full access orders" ON orders FOR ALL TO authenticated
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
-
-CREATE POLICY "Admin full access products" ON products FOR ALL TO authenticated
-  USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'admin'));
+```bash
+vercel
 ```
 
-### 6. Seed de datos iniciales (opcional)
+2. **Configurá variables de entorno**
 
-```sql
--- Categorías
-INSERT INTO categories (name, slug, image_url, "order") VALUES
-  ('Cervezas', 'cervezas', 'https://placehold.co/400x300/FFA500/white?text=Cervezas', 1),
-  ('Vinos', 'vinos', 'https://placehold.co/400x300/8B0000/white?text=Vinos', 2),
-  ('Espumantes', 'espumantes', 'https://placehold.co/400x300/FFD700/white?text=Espumantes', 3),
-  ('Fernet', 'fernet', 'https://placehold.co/400x300/654321/white?text=Fernet', 4),
-  ('Packs', 'packs', 'https://placehold.co/400x300/4169E1/white?text=Packs', 5);
+Agregá todas las variables de `.env.local` en Vercel Dashboard.
 
--- Usuario admin de prueba (cambiar credenciales en producción)
-INSERT INTO profiles (id, full_name, phone, role) 
-VALUES ('uuid-del-usuario-admin', 'Admin', '+542645555555', 'admin');
+3. **Deploy**
+
+```bash
+vercel --prod
 ```
-
-## 🚢 Deploy en Vercel
-
-1. Hacer push a GitHub/GitLab
-2. Importar proyecto en [Vercel](https://vercel.com)
-3. Configurar las variables de entorno
-4. Deploy automático
 
 ## 📱 Funcionalidades Principales
 
-- ✅ Catálogo de productos con filtros
-- ✅ Carrito de compras con persistencia
-- ✅ Checkout con Mercado Pago o efectivo
-- ✅ Validación de zona de cobertura
-- ✅ Tracking en tiempo real del pedido
-- ✅ Panel admin para gestión de pedidos y productos
-- ✅ Notificaciones automáticas por WhatsApp
-- ✅ Sistema de roles (cliente, admin, repartidor)
+### Para Clientes
+- Catálogo de productos con filtros
+- Carrito de compras persistente
+- Checkout con validación de zona
+- Pago online (Mercado Pago) o efectivo
+- Tracking en tiempo real del pedido
 
-## 🔐 Roles y Permisos
+### Para Administradores
+- Dashboard con métricas del día
+- Gestión de productos (CRUD)
+- Gestión de pedidos
+- Asignación de repartidores
+- Notificaciones por WhatsApp
 
-- **Customer**: Ver productos, hacer pedidos, trackear entregas
-- **Admin**: Gestión completa de productos, pedidos y usuarios
-- **Delivery**: Ver pedidos asignados, actualizar estado de entrega
+### Para Repartidores
+- Vista de pedidos asignados
+- Actualización de estados
+- Información de entrega
 
-## 📞 Soporte
+## 🔧 Scripts Disponibles
 
-Para consultas técnicas o comerciales: [tu-email@ejemplo.com]
+```bash
+npm run dev          # Servidor de desarrollo
+npm run build        # Build de producción
+npm run start        # Servidor de producción
+npm run lint         # Linter
+npm run type-check   # Verificación de tipos
+```
 
 ## 📄 Licencia
 
-Propietario: [Tu Empresa]. Todos los derechos reservados.
+Propietario - Todos los derechos reservados
+
+## 🆘 Soporte
+
+Para problemas o consultas, contactá a: soporte@bebidasanjuan.com
