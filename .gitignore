@@ -33,6 +33,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# IDE
+# ide
 .vscode
 .idea
+*.swp
+*.swo
+*~
