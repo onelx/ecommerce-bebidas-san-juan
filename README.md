@@ -1,175 +1,144 @@
-# Ecommerce Bebidas San Juan
+# Bebidas San Juan - Ecommerce de Bebidas Premium
 
-Plataforma de venta online de bebidas premium con delivery 24hs en San Juan, Argentina.
-
-## Características
-
-- 🚀 Catálogo de productos con filtros avanzados
-- 🛒 Carrito de compras con persistencia local
-- 💳 Integración con Mercado Pago
-- 📍 Validación de zonas de cobertura
-- 🚚 Tracking en tiempo real de pedidos
-- 👨‍💼 Panel administrativo completo
-- 📱 100% responsive y mobile-first
-- ⚡ Delivery 24 horas
+Plataforma de venta online de bebidas premium con delivery 24 horas en San Juan Capital.
 
 ## Stack Tecnológico
 
-- **Frontend**: Next.js 14 (App Router) + TypeScript
-- **Estilos**: Tailwind CSS
+- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Edge Functions + Realtime)
 - **Pagos**: Mercado Pago
-- **Estado**: Zustand + React Query
 - **Hosting**: Vercel
+- **Notificaciones**: WhatsApp Business API
+
+## Características Principales
+
+- ✅ Catálogo de productos con filtros avanzados
+- ✅ Carrito de compras con persistencia local
+- ✅ Checkout con validación de zona de cobertura
+- ✅ Pagos con Mercado Pago o efectivo
+- ✅ Tracking en tiempo real del pedido
+- ✅ Panel administrativo completo
+- ✅ Sistema de roles (cliente, admin, repartidor)
+- ✅ Notificaciones automáticas por WhatsApp
 
 ## Requisitos Previos
 
 - Node.js 18+ 
 - npm o yarn
-- Cuenta en Supabase
-- Cuenta en Mercado Pago (vendedor)
-- Cuenta en Google Cloud (para Maps API)
+- Cuenta de Supabase
+- Cuenta de Mercado Pago
+- Google Maps API Key (opcional, para autocompletado de direcciones)
+- WhatsApp Business API (opcional, para notificaciones)
 
 ## Instalación
 
 1. **Clonar el repositorio**
+
 ```bash
-git clone <repo-url>
-cd ecommerce-bebidas-sanjuan
+git clone <repository-url>
+cd bebidas-san-juan
 ```
 
 2. **Instalar dependencias**
+
 ```bash
 npm install
 ```
 
 3. **Configurar variables de entorno**
+
+Copiar el archivo `.env.example` a `.env.local` y completar con tus credenciales:
+
 ```bash
 cp .env.example .env.local
 ```
 
-Editar `.env.local` con tus credenciales reales.
-
 4. **Configurar Supabase**
 
-Ejecutar las migraciones SQL en tu proyecto de Supabase (ver carpeta `/supabase/migrations`).
+Ejecutar las migraciones SQL en tu proyecto Supabase (ver carpeta `/supabase/migrations`):
 
-Habilitar Row Level Security (RLS) en todas las tablas.
-
-Configurar políticas de seguridad según los archivos de migración.
+- Crear tablas: profiles, categories, products, orders, order_items, delivery_zones
+- Configurar Row Level Security (RLS)
+- Habilitar Realtime para la tabla `orders`
 
 5. **Ejecutar en desarrollo**
+
 ```bash
 npm run dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000)
-
-## Configuración de Supabase
-
-### 1. Crear proyecto en Supabase
-- Ir a https://app.supabase.com
-- Crear nuevo proyecto
-- Copiar URL y anon key
-
-### 2. Ejecutar migraciones
-Ejecutar el SQL de la carpeta `supabase/migrations` en el editor SQL de Supabase.
-
-### 3. Configurar Storage
-Crear buckets:
-- `product-images` (público)
-- `category-images` (público)
-
-### 4. Configurar Realtime
-Habilitar Realtime en la tabla `orders` para tracking en vivo.
-
-## Configuración de Mercado Pago
-
-1. Crear cuenta de vendedor en https://www.mercadopago.com.ar
-2. Ir a Developers > Credenciales
-3. Copiar Public Key y Access Token
-4. Configurar webhook URL en MP: `https://tu-dominio.com/api/webhooks/mercadopago`
-
-## Despliegue en Vercel
-
-1. **Conectar repositorio**
-```bash
-npm install -g vercel
-vercel login
-vercel
-```
-
-2. **Configurar variables de entorno**
-En el dashboard de Vercel, agregar todas las variables de `.env.example`
-
-3. **Desplegar**
-```bash
-vercel --prod
-```
+La aplicación estará disponible en `http://localhost:3000`
 
 ## Estructura del Proyecto
 
 ```
-├── app/
-│   ├── (admin)/          # Rutas del panel admin
-│   ├── (auth)/           # Rutas de autenticación
-│   ├── (shop)/           # Rutas de la tienda
-│   ├── api/              # API Routes
-│   ├── globals.css       # Estilos globales
-│   └── layout.tsx        # Layout raíz
-├── components/           # Componentes reutilizables
-├── hooks/                # Custom hooks
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Rutas de autenticación
+│   ├── (admin)/           # Panel administrativo
+│   ├── (shop)/            # Tienda (catálogo, producto, carrito)
+│   ├── api/               # API Routes
+│   └── layout.tsx         # Layout principal
+├── components/            # Componentes reutilizables
+│   ├── ui/               # Componentes base (shadcn/ui)
+│   └── ...               # Componentes de negocio
+├── hooks/                # Custom React Hooks
 ├── lib/                  # Utilidades y configuración
 ├── services/             # Servicios de API
-├── types/                # Tipos TypeScript
+├── store/                # Zustand stores
+├── types/                # TypeScript types
 └── public/               # Archivos estáticos
 ```
 
-## Comandos Útiles
+## Despliegue en Vercel
+
+1. **Conectar repositorio a Vercel**
 
 ```bash
-# Desarrollo
-npm run dev
-
-# Build de producción
-npm run build
-
-# Iniciar servidor de producción
-npm start
-
-# Linting
-npm run lint
-
-# Type checking
-npm run type-check
+npm i -g vercel
+vercel
 ```
 
-## Testing
+2. **Configurar variables de entorno**
 
-```bash
-# Ejecutar tests
-npm test
+En el dashboard de Vercel, agregar todas las variables del archivo `.env.example`
 
-# Tests en modo watch
-npm test -- --watch
+3. **Configurar dominios**
 
-# Coverage
-npm test -- --coverage
-```
+- Configurar dominio personalizado en Vercel
+- Actualizar `NEXT_PUBLIC_APP_URL` con el dominio de producción
 
-## Roadmap
+## Configuración de Mercado Pago
 
-- [ ] Integración con WhatsApp Business API
-- [ ] Programa de puntos y fidelización
-- [ ] App móvil nativa (React Native)
-- [ ] Integración con sistemas de facturación (AFIP)
-- [ ] Multi-tienda (expandir a otras provincias)
-- [ ] Análisis predictivo de stock
+1. Crear cuenta en https://www.mercadopago.com.ar
+2. Obtener credenciales de producción: https://www.mercadopago.com.ar/developers/panel/credentials
+3. Configurar webhook en Mercado Pago apuntando a: `https://tu-dominio.com/api/webhooks/mercadopago`
 
-## Soporte
+## Base de Datos
 
-Para soporte, enviar email a soporte@bebidassanjuan.com
+### Tablas Principales
+
+- `profiles`: Usuarios del sistema (clientes, admins, repartidores)
+- `categories`: Categorías de productos
+- `products`: Catálogo de bebidas
+- `orders`: Pedidos realizados
+- `order_items`: Items de cada pedido
+- `delivery_zones`: Zonas de cobertura con polígonos geográficos
+
+### Políticas de Seguridad (RLS)
+
+Todas las tablas tienen Row Level Security habilitado:
+- Clientes solo ven sus propios pedidos
+- Admins tienen acceso completo
+- Repartidores solo ven pedidos asignados
+
+## Contribuir
+
+1. Fork el proyecto
+2. Crear una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit de cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crear Pull Request
 
 ## Licencia
 
-Propietario. Todos los derechos reservados.
+MIT
