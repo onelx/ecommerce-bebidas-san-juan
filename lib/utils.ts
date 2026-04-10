@@ -260,3 +260,20 @@ export function percentage(value: number, total: number): number {
   if (total === 0) return 0;
   return Math.round((value / total) * 100);
 }
+
+export function generateOrderNotificationMessage(
+  orderNumber: number,
+  status: string,
+  customerName: string
+): string {
+  const statusMessages: Record<string, string> = {
+    confirmed: 'Tu pedido fue confirmado y está siendo preparado.',
+    preparing: 'Tu pedido está siendo preparado.',
+    on_the_way: 'Tu pedido está en camino.',
+    delivered: 'Tu pedido fue entregado. ¡Gracias!',
+    cancelled: 'Tu pedido fue cancelado.',
+  };
+
+  const message = statusMessages[status] || `El estado de tu pedido cambió a: ${status}`;
+  return `Hola ${customerName}! Pedido #${String(orderNumber).padStart(6, '0')}: ${message}`;
+}

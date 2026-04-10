@@ -114,8 +114,8 @@ export const notificationsService = {
   },
 
   formatOrderNotification(order: Order): string {
-    const items = order.order_items?.map(item => 
-      `- ${item.quantity}x ${item.product.name} ($${item.unit_price})`
+    const items = order.order_items?.map(item =>
+      `- ${item.quantity}x ${item.product?.name ?? 'Producto'} ($${item.unit_price})`
     ).join('\n') || '';
 
     return `DETALLE DEL PEDIDO #${order.order_number}\n\n${items}\n\nSubtotal: $${order.subtotal}\nEnvío: $${order.delivery_fee}\nTotal: $${order.total}\n\nDirección: ${order.delivery_address}${order.include_ice ? '\n\n❄️ Incluye hielo' : ''}${order.notes ? `\n\nNotas: ${order.notes}` : ''}`;

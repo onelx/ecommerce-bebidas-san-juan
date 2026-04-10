@@ -1,5 +1,5 @@
 import { supabase, supabaseAdmin } from '@/lib/supabase';
-import type { Order, OrderFilters, CreateOrderPayload, OrderStatus, ApiResponse } from '@/types';
+import type { Order, OrderFilters, CreateOrderData as CreateOrderPayload, OrderStatus, ApiResponse } from '@/types';
 
 export class OrdersService {
   static async createOrder(payload: CreateOrderPayload): Promise<ApiResponse<Order>> {

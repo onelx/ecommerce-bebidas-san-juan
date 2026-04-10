@@ -5,7 +5,9 @@ interface ProductFilters {
   categoryId?: string;
   search?: string;
   isAvailable?: boolean;
+  available?: boolean;
   isPack?: boolean;
+  limit?: number;
 }
 
 interface CreateProductParams {
@@ -44,6 +46,14 @@ export const productsService = {
 
     if (filters?.isPack !== undefined) {
       query = query.eq('is_pack', filters.isPack);
+    }
+
+    if (filters?.available !== undefined) {
+      query = query.eq('is_available', filters.available);
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
     }
 
     const { data, error } = await query;

@@ -66,6 +66,7 @@ export interface Order {
   created_at: string;
   delivered_at: string | null;
   items?: OrderItem[];
+  order_items?: OrderItem[];
 }
 
 export interface OrderItem {
@@ -81,7 +82,7 @@ export interface OrderItem {
 export interface DeliveryZone {
   id: string;
   name: string;
-  polygon: GeoJSON.Polygon | null;
+  polygon: { type: 'Polygon'; coordinates: number[][][] } | null;
   delivery_fee: number;
   is_active: boolean;
 }
@@ -126,9 +127,12 @@ export interface ProductFilters {
   category_id?: string;
   search?: string;
   is_available?: boolean;
+  available_only?: boolean;
   is_pack?: boolean;
   min_price?: number;
   max_price?: number;
+  limit?: number;
+  offset?: number;
 }
 
 export interface OrderFilters {
@@ -138,6 +142,9 @@ export interface OrderFilters {
   date_from?: string;
   date_to?: string;
   search?: string;
+  delivery_person_id?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface PaginationParams {
@@ -225,14 +232,16 @@ export interface RealtimeOrderUpdate {
 }
 
 export interface NotificationPayload {
-  to: string;
+  to?: string;
   message: string;
-  type: 'whatsapp' | 'email' | 'sms';
+  type?: 'whatsapp' | 'email' | 'sms';
   data?: Record<string, unknown>;
+  customer_phone?: string;
+  order_id?: string;
 }
 
 export interface ApiResponse<T = unknown> {
-  success: boolean;
+  success?: boolean;
   data?: T;
   error?: string;
   message?: string;

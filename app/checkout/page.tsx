@@ -3,14 +3,14 @@
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatPrice } from '@/lib/utils/formatPrice';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { PaymentSelector } from '@/components/PaymentSelector';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, totals, clearCart } = useCart();
+  const { items, totals, clearCart, isLoaded } = useCart();
   const { user } = useAuth();
 
   const [step, setStep] = useState(1);
@@ -31,13 +31,18 @@ export default function CheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<'mercadopago' | 'cash'>('mercadopago');
 
-  if (items.length === 0) {
-    router.push('/carrito');
+  useEffect(() => {
+    if (isLoaded && items.length === 0) {
+      router.push('/carrito');
+    }
+  }, [isLoaded, items.length, router]);
+
+  if (!isLoaded || items.length === 0) {
     return null;
   }
 
-  const handleAddressSelect = (address: string, lat: number, lng: number) => {
-    setDeliveryData({ ...deliveryData, address, lat, lng });
+  const handleAddressSelect = (address: string, lat?: number, lng?: number) => {
+    setDeliveryData({ ...deliveryData, address, lat: lat ?? 0, lng: lng ?? 0 });
   };
 
   const handleSubmitOrder = async () => {
@@ -193,7 +198,10 @@ export default function CheckoutPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Dirección completa *
                         </label>
-                        <AddressAutocomplete onAddressSelect={handleAddressSelect} />
+                        <AddressAutocomplete
+                          value={deliveryData.address}
+                          onChange={handleAddressSelect}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -249,8 +257,8 @@ export default function CheckoutPage() {
                       <div>
                         <h3 className="font-semibold text-gray-900 mb-3">Método de pago</h3>
                         <PaymentSelector
-                          selected={paymentMethod}
-                          onChange={setPaymentMethod}
+                          selectedMethod={paymentMethod}
+                          onSelect={setPaymentMethod}
                         />
                       </div>
                     </div>

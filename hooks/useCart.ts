@@ -1,21 +1,34 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import type { Product } from '@/types';
 
 export interface CartItem {
-  product: Product;
+  productId: string;
+  name: string;
+  price: number;
   quantity: number;
+  image_url: string | null;
+}
+
+interface CartTotals {
+  items: number;
+  subtotal: number;
 }
 
 interface Cart {
   items: CartItem[];
-  subtotal: number;
-  itemCount: number;
+  totals: CartTotals;
 }
 
 const CART_STORAGE_KEY = 'ecommerce-bebidas-cart';
 
+const calculateTotals = (items: CartItem[]): CartTotals => ({
+  items: items.reduce((sum, item) => sum + item.quantity, 0),
+  subtotal: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+});
+
 export function useCart() {
-  const [cart, setCart] = useState<Cart>({ items: [], subtotal: 0, itemCount: 0 });
+  const [cart, setCart] = useState<Cart>({ items: [], totals: { items: 0, subtotal: 0 } });
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -23,10 +36,10 @@ export function useCart() {
     if (savedCart) {
       try {
         const parsed = JSON.parse(savedCart);
-        setCart(calculateTotals(parsed.items || []));
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
-        setCart({ items: [], subtotal: 0, itemCount: 0 });
+        const items: CartItem[] = parsed.items || [];
+        setCart({ items, totals: calculateTotals(items) });
+      } catch {
+        setCart({ items: [], totals: { items: 0, subtotal: 0 } });
       }
     }
     setIsLoaded(true);
@@ -38,35 +51,26 @@ export function useCart() {
     }
   }, [cart, isLoaded]);
 
-  const calculateTotals = (items: CartItem[]): Cart => {
-    const subtotal = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-    return { items, subtotal, itemCount };
-  };
-
-  const addItem = (product: Product, quantity: number = 1) => {
-    setCart(prevCart => {
-      const existingItemIndex = prevCart.items.findIndex(item => item.product.id === product.id);
-      
+  const addItem = (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
+    setCart(prev => {
+      const quantity = item.quantity ?? 1;
+      const existingIndex = prev.items.findIndex(i => i.productId === item.productId);
       let newItems: CartItem[];
-      if (existingItemIndex >= 0) {
-        newItems = [...prevCart.items];
-        newItems[existingItemIndex] = {
-          ...newItems[existingItemIndex],
-          quantity: newItems[existingItemIndex].quantity + quantity
-        };
+      if (existingIndex >= 0) {
+        newItems = prev.items.map((i, idx) =>
+          idx === existingIndex ? { ...i, quantity: i.quantity + quantity } : i
+        );
       } else {
-        newItems = [...prevCart.items, { product, quantity }];
+        newItems = [...prev.items, { ...item, quantity }];
       }
-      
-      return calculateTotals(newItems);
+      return { items: newItems, totals: calculateTotals(newItems) };
     });
   };
 
   const removeItem = (productId: string) => {
-    setCart(prevCart => {
-      const newItems = prevCart.items.filter(item => item.product.id !== productId);
-      return calculateTotals(newItems);
+    setCart(prev => {
+      const newItems = prev.items.filter(i => i.productId !== productId);
+      return { items: newItems, totals: calculateTotals(newItems) };
     });
   };
 
@@ -75,33 +79,30 @@ export function useCart() {
       removeItem(productId);
       return;
     }
-
-    setCart(prevCart => {
-      const newItems = prevCart.items.map(item =>
-        item.product.id === productId ? { ...item, quantity } : item
+    setCart(prev => {
+      const newItems = prev.items.map(i =>
+        i.productId === productId ? { ...i, quantity } : i
       );
-      return calculateTotals(newItems);
+      return { items: newItems, totals: calculateTotals(newItems) };
     });
   };
 
   const clearCart = () => {
-    setCart({ items: [], subtotal: 0, itemCount: 0 });
+    setCart({ items: [], totals: { items: 0, subtotal: 0 } });
   };
 
   const getItemQuantity = (productId: string): number => {
-    const item = cart.items.find(item => item.product.id === productId);
-    return item?.quantity || 0;
+    return cart.items.find(i => i.productId === productId)?.quantity || 0;
   };
 
   return {
     items: cart.items,
-    subtotal: cart.subtotal,
-    itemCount: cart.itemCount,
+    totals: cart.totals,
     addItem,
     removeItem,
     updateQuantity,
     clearCart,
     getItemQuantity,
-    isLoaded
+    isLoaded,
   };
 }

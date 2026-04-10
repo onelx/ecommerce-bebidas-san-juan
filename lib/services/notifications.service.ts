@@ -4,7 +4,7 @@ import { generateOrderNotificationMessage } from '@/lib/utils';
 export class NotificationsService {
   static async sendWhatsAppNotification(payload: NotificationPayload): Promise<ApiResponse<null>> {
     try {
-      const phone = payload.customer_phone.replace(/\D/g, '');
+      const phone = (payload.customer_phone ?? payload.to ?? '').replace(/\D/g, '');
       
       const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(payload.message)}`;
       
